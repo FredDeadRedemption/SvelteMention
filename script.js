@@ -307,7 +307,3 @@ commentField.addEventListener("keydown", (event) => {
             selectedUserIndex = 0; // reset selected user index
     }
 });
-
-const x = () => {};
-
-commentField.addEventListener("keyup", (event) => { if(event.key == "Enter") { x() } })
