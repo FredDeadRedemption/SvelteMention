@@ -13,14 +13,14 @@ const insertUser = (user) => {
 
     let val = commentField.innerHTML.trim(); // remove leading and trailing spaces
 
-    let atIndex = val.lastIndexOf("@@"); // index of the last occurrence of "@@" symbol
+    let atIndex = val.lastIndexOf("@"); // index of the last occurrence of "@" symbol
 
     let userSpan = document.createElement("span");
     userSpan.className = "user-tag"; 
 
     let nameSpan = document.createElement("span");
     nameSpan.className = "name-tag"; 
-    nameSpan.innerHTML = `${user.displayName}`;
+    nameSpan.innerHTML = `${user.name}`;
 
     let idSpan = document.createElement("span");
     idSpan.className = "id-tag"; 
@@ -28,7 +28,7 @@ const insertUser = (user) => {
 
     if(atIndex !== -1) {
         // remove everything after atIndex (including atIndex) from the commentField
-        commentField.innerHTML = val.substring(0, atIndex + 1); // add 1 to include "@@" symbol
+        commentField.innerHTML = val.substring(0, atIndex + 1); // add 1 to include "@" symbol
     }
 
     userSpan.appendChild(nameSpan);
@@ -70,7 +70,7 @@ const renderSuggestedUsers = (suggestedUsers) => {
     if (index > MAXUSERS) return; // render maximun of 8 users
 
     let userElement = document.createElement("div");
-    userElement.textContent = user.displayName
+    userElement.textContent = user.name
     userSuggestionBox.appendChild(userElement);
 
     userElement.addEventListener("click", () => { insertUser(user); }); // on click insert that user in comment field
@@ -123,26 +123,26 @@ commentField.addEventListener("keyup", (event) => {
 
     let threeLastWords = [words[words.length - 3], words[words.length - 2], words.pop()];
 
-    if (!(threeLastWords.some(word => word?.startsWith("@@")))) {
+    if (!(threeLastWords.some(word => word?.startsWith("@")))) {
         console.log("Last three words", threeLastWords[0], threeLastWords[1], threeLastWords[2]); // DEBUGGING
         userSuggestionBox.innerText = " ";
         userSuggestionBox.style.display = "none";
     }
 
-    if (!(threeLastWords.some(word => word?.startsWith("@@")))) return;  // if any of 3 last words dont start with "@@", dont search
+    if (!(threeLastWords.some(word => word?.startsWith("@")))) return;  // if any of 3 last words dont start with "@", dont search
 
     let atIndex = -1; // find the latest index of a word containing at symbol and make it the start of the search term
     for (let i = threeLastWords.length - 1; i >= 0; i--) {
-        if (threeLastWords[i]?.startsWith("@@")) {
+        if (threeLastWords[i]?.startsWith("@")) {
             atIndex = i;
             break;
         }
     }
 
-    // extract search term after "@@" symbol, with a maximum lenght of 3 words, after 3 words searching will stop
+    // extract search term after "@" symbol, with a maximum lenght of 3 words, after 3 words searching will stop
     let searchTerm = " ";
     if (atIndex + 2 < threeLastWords.length) {
-        // words that starts with the "@@" symbol (minus the "@@" symbol) + space + second word + space + third word
+        // words that starts with the "@" symbol (minus the "@" symbol) + space + second word + space + third word
         searchTerm = threeLastWords[atIndex].substring(1).concat(" ").concat(threeLastWords[atIndex + 1]).concat(" ").concat(threeLastWords[atIndex + 2]);
     } else if (atIndex + 1 < threeLastWords.length) {
         searchTerm = threeLastWords[atIndex].substring(1).concat(" ").concat(threeLastWords[atIndex + 1]);
@@ -151,7 +151,7 @@ commentField.addEventListener("keyup", (event) => {
     }
 
     // Determine users matching searchTerm
-    filteredUsers = users.filter(user => user.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
+    filteredUsers = users.filter(user => user.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if(filteredUsers.length == 0 ) userSuggestionBox.style.display = "none";
 
@@ -180,6 +180,25 @@ const selectUser = (index) => {
     }
 };
 
+const insertLineBreak = () => {
+    let range = window.getSelection().getRangeAt(0);
+    let br = document.createElement("br");
+
+    // Insert the <br> tag at the current position
+    range.insertNode(br);
+
+    // Move cursor to after the inserted <br>
+    range.setStartAfter(br);
+    range.setEndAfter(br);
+    range.collapse(false);
+
+    // Apply the range to the selection
+    let sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+};
+
+
 commentField.addEventListener("keydown", (event) => {
     switch (event.key) {
         case "ArrowUp":
@@ -191,13 +210,31 @@ commentField.addEventListener("keydown", (event) => {
             selectUser(Math.min(filteredUsers.length - 1, selectedUserIndex + 1));
             break;
         case "Enter":
+            const isSearching = userSuggestionBox.innerText && userSuggestionBox.style.display == "block";
+            isSearching ? console.log("ENTER WHILE SEARCHING") : console.log("ENTER WHILE NOT SEARCHING"); // DEBUGGING
+            if(isSearching){
+                event.preventDefault(); // prevent new line in user insert           
+                insertUser(filteredUsers[selectedUserIndex]);
+                userSuggestionBox.innerHTML = ""; // clear userBox after selection
+                userSuggestionBox.style.display = "none";
+            } else{ 
+                event.preventDefault();
+                insertLineBreak();
+            }
+            /*
+            isSearching ? console.log("ENTER WHILE SEARCHING") : console.log("ENTER WHILE NOT SEARCHING");
             if (!userSuggestionBox.innerText || userSuggestionBox.style.display == "none") return; // prevent inserting when not searching           
             event.preventDefault(); // prevent new line in user insert           
             insertUser(filteredUsers[selectedUserIndex]);
             userSuggestionBox.innerHTML = ""; // clear userBox after selection
             userSuggestionBox.style.display = "none";
             break;
+            */
         default:
             selectedUserIndex = 0; // reset selected user index
     }
 });
+
+const x = () => {};
+
+commentField.addEventListener("keyup", (event) => { if(event.key == "Enter") { x() } })
