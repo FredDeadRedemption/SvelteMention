@@ -151,6 +151,7 @@ const updateUserSuggestionBoxPosition = () => {
 
 updateUserSuggestionBoxPosition();
 
+commentField.addEventListener("drop", (event) => {event.preventDefault()});
 commentField.addEventListener("mouseup", updateUserSuggestionBoxPosition);
 commentField.addEventListener("keyup", (event) => {
     if(isCursorInsideUserSpan()) return;
@@ -280,8 +281,6 @@ const deleteUserSpanIfNecessary = () => {
      }
 };
 
-
-
 commentField.addEventListener("keydown", (event) => {
     switch (event.key) {
         case "ArrowUp":
@@ -293,7 +292,11 @@ commentField.addEventListener("keydown", (event) => {
             selectUser(Math.min(filteredUsers.length - 1, selectedUserIndex + 1));
             break;
         case "Enter":
-            if(isCursorInsideUserSpan()) return;
+            if(isCursorInsideUserSpan()){
+                event.preventDefault();
+                deleteUserSpanIfNecessary();
+                return;
+            }
             const isSearching = userSuggestionBox.innerText && userSuggestionBox.style.display == "block";
             if(isSearching){
                 event.preventDefault(); // prevent new line in user insert           
@@ -305,11 +308,9 @@ commentField.addEventListener("keydown", (event) => {
                 insertLineBreak();
             }
             break;
-        case "Backspace":
-        case "Delete":
-            deleteUserSpanIfNecessary();
-            break;
         default:
             selectedUserIndex = 0; // reset selected user index
+            if(event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "ArrowLeft" || event.key === "ArrowRight") return;
+            deleteUserSpanIfNecessary();
     }
 });
