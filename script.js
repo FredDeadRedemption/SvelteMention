@@ -115,7 +115,13 @@ const renderSuggestedUsers = (suggestedUsers) => {
     userElement.textContent = user.name
     userSuggestionBox.appendChild(userElement);
 
-    userElement.addEventListener("click", () => { insertUser(user); }); // on click insert that user in comment field
+    userElement.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+    });
+    userElement.addEventListener("click", (event) => { 
+        event.preventDefault();
+        insertUser(user); 
+    }); // on click insert that user in comment field
 
     // highlight the previously selected user, if any
     if (index === selectedUserIndex) {
