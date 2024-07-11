@@ -27,6 +27,7 @@ body {
 }
 
 #comment-field{
+    background-color: seashell;
     border: 1px solid black;
     padding: 10px;
     min-width: 800px;
@@ -43,7 +44,7 @@ body {
 }
 
 .name-tag{
-    background-color:cadetblue;
+    color:lightskyblue;
     padding: 2;
 }
 

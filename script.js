@@ -10,44 +10,67 @@ const MAXUSERS = 8; // max amount of users in the suggetsion box
 let prevSelectedUser = -1; // last user highlighted
 
 const insertUser = (user) => {
+    // Get the full HTML content of the comment field
+    let val = commentField.innerHTML.trim();
 
-    let val = commentField.innerHTML.trim(); // remove leading and trailing spaces
+    // Get the current cursor position
+    let selection = window.getSelection();
+    let range = selection.getRangeAt(0);
+    let preCursorRange = document.createRange();
+    preCursorRange.selectNodeContents(commentField);
+    preCursorRange.setEnd(range.endContainer, range.endOffset);
 
-    let atIndex = val.lastIndexOf("@"); // index of the last occurrence of "@" symbol
+    // Get the HTML content up to the cursor position
+    let preCursorHTML = preCursorRange.cloneContents();
 
+    // Convert the DocumentFragment to a string
+    let container = document.createElement("div");
+    container.appendChild(preCursorHTML);
+    let preCursorText = container.innerHTML;
+
+    // Find the last index of "@" in the text before the cursor
+    let atIndex = preCursorText.lastIndexOf("@");
+
+    if (atIndex === -1) return; // No "@" found, exit the function
+
+    // Get the HTML content after the cursor position
+    let postCursorRange = document.createRange();
+    postCursorRange.setStart(range.endContainer, range.endOffset);
+    postCursorRange.setEnd(commentField, commentField.childNodes.length);
+    let postCursorHTML = postCursorRange.cloneContents();
+
+    // Remove everything after atIndex (including @ symbol) from the commentField
+    commentField.innerHTML = preCursorText.substring(0, atIndex);
+
+    // Create the user mention span
     let userSpan = document.createElement("span");
     userSpan.className = "user-tag"; 
 
     let nameSpan = document.createElement("span");
     nameSpan.className = "name-tag"; 
-    nameSpan.innerHTML = `${user.name}`;
+    nameSpan.innerHTML = `@${user.name}`;
 
     let idSpan = document.createElement("span");
     idSpan.className = "id-tag"; 
     idSpan.innerHTML = `${user.id}`;
 
-    if(atIndex !== -1) {
-        // remove everything after atIndex (including atIndex) from the commentField
-        commentField.innerHTML = val.substring(0, atIndex + 1); // add 1 to include "@" symbol
-    }
-
     userSpan.appendChild(nameSpan);
     userSpan.appendChild(idSpan);
     commentField.appendChild(userSpan);
 
-    // create a non-breaking space after the inserted span to ensure correct cursor positioning
+    // Create a non-breaking space after the inserted span to ensure correct cursor positioning
     let space = document.createTextNode("\u00A0");
     commentField.appendChild(space);
 
-    // move cursor to the end of the inserted span plus one character for the non-breaking space
-    let range = document.createRange();
-    let sel = window.getSelection();
+    // Append the remaining content after the cursor position
+    commentField.appendChild(postCursorHTML);
 
-    // ensure the cursor is set correctly without exceeding the node's length
-    range.setStartAfter(space);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    // Move cursor to the end of the inserted span plus one character for the non-breaking space
+    let newRange = document.createRange();
+    newRange.setStartAfter(space);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
 
     updateUserSuggestionBoxPosition();
 
@@ -55,7 +78,26 @@ const insertUser = (user) => {
     filteredUsers = []; // reset filtered users
     userSuggestionBox.innerHTML = "";  // clear the user suggestion box
     userSuggestionBox.style.display = "none";
-}
+};
+
+const isCursorInsideUserSpan = () => {
+    let selection = window.getSelection();
+    if (selection.rangeCount === 0) return false;
+
+    let range = selection.getRangeAt(0);
+    let container = range.startContainer;
+
+    while (container) {
+        if (container.nodeType === Node.ELEMENT_NODE && container.classList.contains('user-tag')) {
+            return true;
+        }
+        container = container.parentNode;
+    }
+
+    return false;
+};
+
+
 
 const renderSuggestedUsers = (suggestedUsers) => {
     userSuggestionBox.innerHTML = " "; // clear the suggestion box
@@ -105,33 +147,45 @@ updateUserSuggestionBoxPosition();
 
 commentField.addEventListener("mouseup", updateUserSuggestionBoxPosition);
 commentField.addEventListener("keyup", (event) => {
+    if(isCursorInsideUserSpan()) return;
+
     if (event.key === "Enter") {
         userSuggestionBox.innerHTML = ""; // clear user suggestion box
         userSuggestionBox.style.display = "none";
         return; // prevent search after user insert
     }
 
-    console.clear() //DEBUGGING
+    console.clear(); // DEBUGGING
 
-    // get the text content of the comment field excluding HTML tags
-    let text = commentField.textContent.trim();
+    // Get the text content of the comment field excluding HTML tags
+    let text = commentField.textContent;
 
-    // replace &nbsp; with regular space
+    // Replace &nbsp; with regular space
     text = text.replace(/\u00A0/g, ' ');
 
-    let words = text.split(" "); 
+    // Get the current cursor position
+    let selection = window.getSelection();
+    let range = selection.getRangeAt(0);
+    let preCursorRange = document.createRange();
+    preCursorRange.selectNodeContents(commentField);
+    preCursorRange.setEnd(range.endContainer, range.endOffset);
 
-    let threeLastWords = [words[words.length - 3], words[words.length - 2], words.pop()];
+    // Get the text content up to the cursor position
+    let preCursorText = preCursorRange.toString().trim();
+
+    let words = preCursorText.split(/\s+/); // Split by spaces
+
+    // Get the three last words before the cursor
+    let threeLastWords = [words[words.length - 3], words[words.length - 2], words[words.length - 1]];
 
     if (!(threeLastWords.some(word => word?.startsWith("@")))) {
         console.log("Last three words", threeLastWords[0], threeLastWords[1], threeLastWords[2]); // DEBUGGING
         userSuggestionBox.innerText = " ";
         userSuggestionBox.style.display = "none";
+        return;
     }
 
-    if (!(threeLastWords.some(word => word?.startsWith("@")))) return;  // if any of 3 last words dont start with "@", dont search
-
-    let atIndex = -1; // find the latest index of a word containing at symbol and make it the start of the search term
+    let atIndex = -1; // Find the latest index of a word containing the "@" symbol
     for (let i = threeLastWords.length - 1; i >= 0; i--) {
         if (threeLastWords[i]?.startsWith("@")) {
             atIndex = i;
@@ -139,10 +193,9 @@ commentField.addEventListener("keyup", (event) => {
         }
     }
 
-    // extract search term after "@" symbol, with a maximum lenght of 3 words, after 3 words searching will stop
-    let searchTerm = " ";
+    // Extract search term after "@" symbol, with a maximum length of 3 words
+    let searchTerm = "";
     if (atIndex + 2 < threeLastWords.length) {
-        // words that starts with the "@" symbol (minus the "@" symbol) + space + second word + space + third word
         searchTerm = threeLastWords[atIndex].substring(1).concat(" ").concat(threeLastWords[atIndex + 1]).concat(" ").concat(threeLastWords[atIndex + 2]);
     } else if (atIndex + 1 < threeLastWords.length) {
         searchTerm = threeLastWords[atIndex].substring(1).concat(" ").concat(threeLastWords[atIndex + 1]);
@@ -153,9 +206,12 @@ commentField.addEventListener("keyup", (event) => {
     // Determine users matching searchTerm
     filteredUsers = users.filter(user => user.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if(filteredUsers.length == 0 ) userSuggestionBox.style.display = "none";
+    if (filteredUsers.length == 0) {
+        userSuggestionBox.style.display = "none";
+        return;
+    }
 
-    console.log("SEARCHING FOR: " + searchTerm); /// DEBUGGING
+    console.log("SEARCHING FOR: " + searchTerm); // DEBUGGING
     console.log(filteredUsers); // DEBUGGING
 
     renderSuggestedUsers(filteredUsers);
@@ -198,6 +254,27 @@ const insertLineBreak = () => {
     sel.addRange(range);
 };
 
+const deleteUserSpanIfNecessary = () => {
+
+    if(!isCursorInsideUserSpan()) return;
+
+     // Get selection and range
+     let selection = window.getSelection();
+     if (!selection.rangeCount) return;
+ 
+     let range = selection.getRangeAt(0);
+     let container = range.startContainer;
+ 
+     // Find the parent node that the cursor is inside of
+     let parentNode = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
+ 
+     // Delete the parent node
+     if (parentNode && parentNode.parentNode) {
+         parentNode.parentNode.removeChild(parentNode);
+     }
+};
+
+
 
 commentField.addEventListener("keydown", (event) => {
     switch (event.key) {
@@ -210,8 +287,8 @@ commentField.addEventListener("keydown", (event) => {
             selectUser(Math.min(filteredUsers.length - 1, selectedUserIndex + 1));
             break;
         case "Enter":
+            if(isCursorInsideUserSpan()) return;
             const isSearching = userSuggestionBox.innerText && userSuggestionBox.style.display == "block";
-            isSearching ? console.log("ENTER WHILE SEARCHING") : console.log("ENTER WHILE NOT SEARCHING"); // DEBUGGING
             if(isSearching){
                 event.preventDefault(); // prevent new line in user insert           
                 insertUser(filteredUsers[selectedUserIndex]);
@@ -221,15 +298,11 @@ commentField.addEventListener("keydown", (event) => {
                 event.preventDefault();
                 insertLineBreak();
             }
-            /*
-            isSearching ? console.log("ENTER WHILE SEARCHING") : console.log("ENTER WHILE NOT SEARCHING");
-            if (!userSuggestionBox.innerText || userSuggestionBox.style.display == "none") return; // prevent inserting when not searching           
-            event.preventDefault(); // prevent new line in user insert           
-            insertUser(filteredUsers[selectedUserIndex]);
-            userSuggestionBox.innerHTML = ""; // clear userBox after selection
-            userSuggestionBox.style.display = "none";
             break;
-            */
+        case "Backspace":
+        case "Delete":
+            deleteUserSpanIfNecessary();
+            break;
         default:
             selectedUserIndex = 0; // reset selected user index
     }
