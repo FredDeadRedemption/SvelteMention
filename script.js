@@ -10,9 +10,6 @@ const MAXUSERS = 8; // max amount of users in the suggetsion box
 let prevSelectedUser = -1; // last user highlighted
 
 const insertUser = (user) => {
-    // Get the full HTML content of the comment field
-    let val = commentField.innerHTML.trim();
-
     // Get the current cursor position
     let selection = window.getSelection();
     let range = selection.getRangeAt(0);
@@ -246,13 +243,18 @@ const selectUser = (index) => {
 const insertLineBreak = () => {
     let range = window.getSelection().getRangeAt(0);
     let br = document.createElement("br");
+    let nbsp = document.createTextNode("\u00A0");
 
     // Insert the <br> tag at the current position
     range.insertNode(br);
 
-    // Move cursor to after the inserted <br>
+    // Insert the &nbsp; after the <br>
     range.setStartAfter(br);
-    range.setEndAfter(br);
+    range.insertNode(nbsp);
+
+    // Move cursor to after the &nbsp;
+    range.setStartAfter(nbsp);
+    range.setEndAfter(nbsp);
     range.collapse(false);
 
     // Apply the range to the selection
@@ -260,6 +262,7 @@ const insertLineBreak = () => {
     sel.removeAllRanges();
     sel.addRange(range);
 };
+
 
 const deleteUserSpanIfNecessary = () => {
 
